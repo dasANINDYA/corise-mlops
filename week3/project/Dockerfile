@@ -12,3 +12,4 @@ WORKDIR /project/app
 
 # Start uvicorn server
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
+
