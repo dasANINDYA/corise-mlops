@@ -4,6 +4,10 @@ from loguru import logger
 
 from classifier import NewsCategoryClassifier
 
+from datetime import datetime
+import json
+
+
 
 class PredictRequest(BaseModel):
     source: str
@@ -34,6 +38,10 @@ def startup_event():
     Access to the model instance and log file will be needed in /predict endpoint, make sure you
     store them as global variables
     """
+    logger.add(LOGS_OUTPUT_PATH)
+    global classifier
+    classifier=NewsCategoryClassifier(verbose=True)
+    classifier.load(MODEL_PATH)
     logger.info("Setup completed")
 
 
@@ -46,6 +54,7 @@ def shutdown_event():
     2. Any other cleanups
     """
     logger.info("Shutting down application")
+    logger.remove()
 
 
 @app.post("/predict", response_model=PredictResponse)
@@ -65,7 +74,19 @@ def predict(request: PredictRequest):
     }
     3. Construct an instance of `PredictResponse` and return
     """
-    response = PredictResponse(scores={"label1": 0.9, "label2": 0.1}, label="label1")
+    
+    logger.info("/predict")
+    start = datetime.now()
+    scores=classifier.predict_proba(request.__dict__)
+    label=classifier.predict_label(request.__dict__)
+    response=PredictResponse(scores=scores,label=label)
+    end=datetime.now()
+    logger.info(json.dumps({
+        'timestamp': start.strftime("%Y:%m:%d %H:%M:%S"),
+        'request': request.__dict__,
+        'response': response.__dict__,
+        'latency': (end - start).microseconds / 1000
+    }))
     return response
 
 
